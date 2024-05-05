@@ -13,7 +13,10 @@ export function createTokens(userId: string) {
   });
   return { accessToken, refreshToken };
 }
-function verifyToken(token: string) {}
+export function verifyAccessToken(token: string) {
+  const decodedToken = jwt.verify(token, process.env.JWT_SECRET!);
+  return decodedToken;
+}
 export function createHashPassword(password: string) {
   const salt = bcrypt.genSaltSync(10);
   const hashedPassword = bcrypt.hashSync(password, salt);
