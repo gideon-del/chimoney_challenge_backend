@@ -8,10 +8,10 @@ export const registerUserSchema = z.object({
     .string({
       required_error: "email is required",
     })
-    .email("Invalid email"),
+    .email("invalid"),
   password: z
     .string({
       required_error: "password is required",
     })
-    .min(8, "Minimum of 8 charcters"),
+    .min(8, "minimum of 8 charcters"),
 });
