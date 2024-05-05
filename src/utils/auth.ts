@@ -22,3 +22,9 @@ export function createHashPassword(password: string) {
   const hashedPassword = bcrypt.hashSync(password, salt);
   return hashedPassword;
 }
+export async function comparePassword(
+  password: string,
+  hashedPassword: string
+) {
+  return await bcrypt.compare(password, hashedPassword);
+}

@@ -15,3 +15,16 @@ export const registerUserSchema = z.object({
     })
     .min(8, "minimum of 8 charcters"),
 });
+
+export const loginUserSchema = z.object({
+  email: z
+    .string({
+      required_error: "email is required",
+    })
+    .email("invalid"),
+  password: z
+    .string({
+      required_error: "password is required",
+    })
+    .min(8, "minimum of 8 charcters"),
+});
