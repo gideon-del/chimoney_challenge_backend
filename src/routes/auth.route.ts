@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { registerUserSchema } from "../utils/validator";
 import supabase from "../models/supabase";
-import { createHashPassword } from "../utils/auth";
+import { createHashPassword, createTokens } from "../utils/auth";
 
 const authRoute = Router();
 
@@ -32,8 +32,10 @@ authRoute.post("/register", async (req, res) => {
       password: hashedPassword,
     })
     .select();
-  console.error(error);
-  return res.status(200).json(data);
+
+  const userId = data![0]["id"] as string;
+  const tokens = createTokens(userId);
+  return res.status(200).json(tokens);
 });
 
 export default authRoute;
