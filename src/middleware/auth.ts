@@ -1,24 +1,34 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../utils/auth";
 import { JsonWebTokenError } from "jsonwebtoken";
-function isSignedIn(req: Request, res: Response, next: NextFunction) {
+import { tokenSchema } from "../utils/validator";
+import { z } from "zod";
+import { TOKEN_TYPE } from "../utils/constants";
+interface UserRequest extends Request {
+  user?: z.infer<typeof tokenSchema>;
+}
+export function isSignedIn(
+  req: UserRequest,
+  res: Response,
+  next: NextFunction
+) {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || authHeader.trim().length == 0) {
-      return res.status(401).json({
-        message: "Unauthorized Access",
-      });
-    }
-    const isValidToken =
-      authHeader.startsWith("Bearer") && authHeader.split(" ").length > 1;
-    if (!isValidToken) {
-      return res.status(400).json({
-        message: "Invalid Token",
-      });
-    }
+    const token = req.cookies[TOKEN_TYPE.access];
 
-    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({
+        message: "Unauthorized access",
+      });
+    }
     const decodeToken = verifyAccessToken(token);
+    const { success: isValid } = tokenSchema.safeParse(decodeToken);
+    if (!isValid) {
+      return res.status(400).json({
+        message: "invalid token",
+      });
+    }
+    req["user"] = decodeToken as z.infer<typeof tokenSchema>;
+    next();
   } catch (error) {
     if (error instanceof JsonWebTokenError) {
       return res.status(401).json({

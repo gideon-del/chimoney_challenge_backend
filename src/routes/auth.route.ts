@@ -1,11 +1,15 @@
 import { Router } from "express";
-import { registerUserSchema } from "../utils/validator";
-import supabase from "../models/supabase";
-import { createHashPassword, createTokens } from "../utils/auth";
-import { createAccount, loginController } from "../controllers/auth.controller";
+import {
+  createAccount,
+  loginController,
+  refreshAccessToken,
+} from "../controllers/auth.controller";
+import { isSignedIn } from "../middleware/auth";
 
 const authRoute = Router();
 
 authRoute.post("/register", createAccount);
 authRoute.post("/login", loginController);
+authRoute.post("/create-jwt", isSignedIn, refreshAccessToken);
+
 export default authRoute;

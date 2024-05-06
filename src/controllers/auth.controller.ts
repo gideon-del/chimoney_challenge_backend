@@ -1,12 +1,21 @@
 import { Request, Response } from "express";
 import {
   comparePassword,
+  createAccessToken,
   createHashPassword,
   createTokens,
+  decodeRefreshToken,
 } from "../utils/auth";
 import supabase from "../models/supabase";
 import { loginUserSchema, registerUserSchema } from "../utils/validator";
-import { TABLE } from "../utils/constants";
+import {
+  ACCESS_TOKEN_TIME,
+  REFRESH_TOKEN_TIME,
+  TABLE,
+  TOKEN_TYPE,
+} from "../utils/constants";
+import { JwtPayload } from "jsonwebtoken";
+import z from "zod";
 export async function createAccount(req: Request, res: Response) {
   const user = registerUserSchema.safeParse(req.body);
   if (!user.success) {
@@ -37,6 +46,18 @@ export async function createAccount(req: Request, res: Response) {
 
   const userId = data![0]["id"] as string;
   const tokens = createTokens(userId);
+  res.cookie(TOKEN_TYPE.access, tokens.accessToken, {
+    maxAge: ACCESS_TOKEN_TIME,
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+  });
+  res.cookie(TOKEN_TYPE.refresh, tokens.refreshToken, {
+    maxAge: REFRESH_TOKEN_TIME,
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+  });
   return res.status(200).json(tokens);
 }
 
@@ -60,13 +81,14 @@ export async function loginController(req: Request, res: Response) {
     });
   }
   const userDetails = data[0];
-  // Compare password
-  const hashedPassword = createHashPassword(user.data.password);
-  const correctPassword = await comparePassword(
-    userDetails.password,
-    hashedPassword
-  );
 
+  // Compare password
+
+  const correctPassword = await comparePassword(
+    user.data.password,
+    userDetails.password
+  );
+  console.log(correctPassword);
   if (!correctPassword) {
     return res.status(400).json({
       message: "Wrong password",
@@ -74,5 +96,54 @@ export async function loginController(req: Request, res: Response) {
   }
   // Create token
   const tokens = createTokens(userDetails.id);
+  const refrehCookieTime = REFRESH_TOKEN_TIME * 1000;
+  const accesCookieTime = ACCESS_TOKEN_TIME * 1000;
+  console.log(refrehCookieTime, accesCookieTime);
+  res.cookie(TOKEN_TYPE.access, tokens.accessToken, {
+    maxAge: accesCookieTime,
+    httpOnly: true,
+    secure: false,
+  });
+  res.cookie(TOKEN_TYPE.refresh, tokens.refreshToken, {
+    maxAge: refrehCookieTime,
+    httpOnly: true,
+    secure: false,
+  });
+
   return res.status(200).json(tokens);
+}
+
+export async function refreshAccessToken(req: Request, res: Response) {
+  const token = req.cookies[TOKEN_TYPE.refresh];
+  if (!token) {
+    return res.status(401).json({
+      message: "Unauthorized access",
+    });
+  }
+  const decodedToken = (await decodeRefreshToken(token!)) as JwtPayload;
+  if (decodedToken.type !== TOKEN_TYPE.refresh) {
+    return res.status(400).json({
+      message: "Wrong refresh token",
+    });
+  }
+  const newAcessToken = await createAccessToken(token, decodedToken.userId);
+  res.cookie(TOKEN_TYPE.access, newAcessToken, {
+    maxAge: ACCESS_TOKEN_TIME * 1000,
+    httpOnly: true,
+  });
+  return res.status(200).json({
+    access: newAcessToken,
+  });
+}
+
+export async function logoutUser(req: Request, res: Response) {
+  res.cookie(TOKEN_TYPE.access, "", {
+    maxAge: 0,
+    httpOnly: true,
+  });
+  res.cookie(TOKEN_TYPE.refresh, "", {
+    maxAge: 0,
+    httpOnly: true,
+  });
+  return res.status(200);
 }

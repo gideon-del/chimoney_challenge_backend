@@ -1,16 +1,25 @@
 import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-const ACCESS_TOKEN_TIME = 86400;
-const REFRESH_TOKEN_TIME = 3600 * 24 * 7;
+import { ACCESS_TOKEN_TIME, REFRESH_TOKEN_TIME, TOKEN_TYPE } from "./constants";
+import { Response } from "express";
+
 export function createTokens(userId: string) {
-  console.log(userId);
-  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET!, {
-    expiresIn: ACCESS_TOKEN_TIME,
-  });
-  const refreshToken = jwt.sign({ userId }, process.env.JWT_SECRET!, {
-    expiresIn: REFRESH_TOKEN_TIME,
-  });
+  const accessToken = jwt.sign(
+    { userId, type: TOKEN_TYPE.access },
+    process.env.JWT_SECRET!,
+    {
+      expiresIn: ACCESS_TOKEN_TIME,
+    }
+  );
+  const refreshToken = jwt.sign(
+    { userId, type: TOKEN_TYPE.refresh },
+    process.env.JWT_SECRET!,
+    {
+      expiresIn: REFRESH_TOKEN_TIME,
+    }
+  );
+
   return { accessToken, refreshToken };
 }
 export function verifyAccessToken(token: string) {
@@ -26,5 +35,18 @@ export async function comparePassword(
   password: string,
   hashedPassword: string
 ) {
-  return await bcrypt.compare(password, hashedPassword);
+  return bcrypt.compareSync(password, hashedPassword);
+}
+
+export async function decodeRefreshToken(refreshToken: string) {
+  return jwt.verify(refreshToken, process.env.JWT_SECRET!);
+}
+export async function createAccessToken(refreshToken: string, userId: string) {
+  return jwt.sign(
+    { userId, type: TOKEN_TYPE.access },
+    process.env.JWT_SECRET!,
+    {
+      expiresIn: ACCESS_TOKEN_TIME,
+    }
+  );
 }

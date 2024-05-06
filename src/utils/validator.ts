@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TOKEN_TYPE } from "./constants";
 
 export const registerUserSchema = z.object({
   name: z.string({
@@ -27,4 +28,8 @@ export const loginUserSchema = z.object({
       required_error: "password is required",
     })
     .min(8, "minimum of 8 charcters"),
+});
+export const tokenSchema = z.object({
+  userId: z.string().min(3),
+  type: z.enum([TOKEN_TYPE.access, TOKEN_TYPE.refresh]),
 });
